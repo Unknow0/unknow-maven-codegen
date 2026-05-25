@@ -3,6 +3,7 @@ package unknow.maven.codegen;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.FileVisitResult;
@@ -19,6 +20,7 @@ import java.util.function.BiConsumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.AbstractMojo;
@@ -210,7 +212,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			for (int i = 0; i < urls.length; i++)
 				urls[i] = new File(classpathElements.get(i)).toURI().toURL();
 			return new URLClassLoader(urls, getClass().getClassLoader());
-		} catch (Exception e) {
+		} catch (DependencyResolutionRequiredException | MalformedURLException e) {
 			logger.error("Failed to get project classpath", e);
 			return getClass().getClassLoader();
 		}
