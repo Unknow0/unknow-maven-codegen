@@ -1,0 +1,32 @@
+name: validate
+
+on: pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [11, 17]
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: ${{matrix.version}}
+
+    - name: build
+      run: mvn -B package
+
+    - name: install xmllint
+      run: |-
+          sudo apt update
+          sudo apt install libxml2-utils
+    - name: validate
+      run: bash .github/validate.sh
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with: 
+        name: results-${{matrix.version}}
+        path: log
