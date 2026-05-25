@@ -16,4 +16,6 @@ jobs:
         distribution: temurin
         java-version: ${{matrix.version}}
     - name: build
-      run: mvn -B package
+      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.organization=unknow -Dsonar.projectKey=Unknow0_unknow-maven-codegen 
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
