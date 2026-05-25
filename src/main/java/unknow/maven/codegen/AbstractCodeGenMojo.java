@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParserConfiguration.LanguageLevel;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.PackageDeclaration;
@@ -124,7 +125,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 				solver.add(new JavaParserTypeSolver(s));
 		}
 		javaSymbolSolver = new JavaSymbolSolver(new CombinedTypeSolver(solver));
-		parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
+		parser = new JavaParser(new ParserConfiguration().setLanguageLevel(LanguageLevel.RAW).setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
 
 		String baseDir = project.getBuild().getDirectory();
 		if (this.codegen.sources == null)
@@ -290,8 +291,8 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			ParseResult<CompilationUnit> parse = parser.parse(file);
 
 			if (!parse.isSuccessful()) {
-				logger.warn("Failed to parse {}: {}", f, parse.getProblems());
-				return FileVisitResult.CONTINUE;
+				ex = new MojoExecutionException("Failed to parse " + f + ": " + parse.getProblems());
+				return FileVisitResult.TERMINATE;
 			}
 			CompilationUnit cu = parse.getResult().orElse(null);
 			if (cu == null)
