@@ -35,8 +35,9 @@
 		<maven.compiler.target>11</maven.compiler.target>
 		<maven.compiler.release>11</maven.compiler.release>
 
+		<maven-resolver.version>1.9.18</maven-resolver.version>
 		<slf4j.version>2.0.13</slf4j.version>
-		<javaparser.version>3.26.1</javaparser.version>
+		<javaparser.version>3.28.1</javaparser.version>
 		<unknow-model.version>1.0.1</unknow-model.version>
 	</properties>
 
@@ -93,7 +94,7 @@
 		<dependency>
 			<groupId>org.apache.maven.resolver</groupId>
 			<artifactId>maven-resolver-api</artifactId>
-			<version>1.9.18</version>
+			<version>${maven-resolver.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.unknow0.model</groupId>

@@ -3,6 +3,7 @@ package unknow.maven.codegen;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.FileVisitResult;
@@ -19,6 +20,7 @@ import java.util.function.BiConsumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.AbstractMojo;
@@ -41,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParserConfiguration.LanguageLevel;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.PackageDeclaration;
@@ -124,7 +127,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 				solver.add(new JavaParserTypeSolver(s));
 		}
 		javaSymbolSolver = new JavaSymbolSolver(new CombinedTypeSolver(solver));
-		parser = new JavaParser(new ParserConfiguration().setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
+		parser = new JavaParser(new ParserConfiguration().setLanguageLevel(LanguageLevel.RAW).setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
 
 		String baseDir = project.getBuild().getDirectory();
 		if (this.codegen.sources == null)
@@ -167,7 +170,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		try {
 			for (String id : codegen.artifacts)
 				parseArtifact(id, c);
-		} catch (Exception e) {
+		} catch (ArtifactResolutionException e) {
 			throw new MojoExecutionException(e);
 		}
 	}
@@ -209,7 +212,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			for (int i = 0; i < urls.length; i++)
 				urls[i] = new File(classpathElements.get(i)).toURI().toURL();
 			return new URLClassLoader(urls, getClass().getClassLoader());
-		} catch (Exception e) {
+		} catch (DependencyResolutionRequiredException | MalformedURLException e) {
 			logger.error("Failed to get project classpath", e);
 			return getClass().getClassLoader();
 		}
@@ -229,7 +232,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			}
 		} catch (MojoExecutionException | MojoFailureException e) {
 			throw e;
-		} catch (Exception e) {
+		} catch (IOException e) {
 			throw new MojoFailureException("Failed to resolve " + id, e);
 		}
 	}
@@ -290,8 +293,8 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			ParseResult<CompilationUnit> parse = parser.parse(file);
 
 			if (!parse.isSuccessful()) {
-				logger.warn("Failed to parse {}: {}", f, parse.getProblems());
-				return FileVisitResult.CONTINUE;
+				ex = new MojoExecutionException("Failed to parse " + f + ": " + parse.getProblems());
+				return FileVisitResult.TERMINATE;
 			}
 			CompilationUnit cu = parse.getResult().orElse(null);
 			if (cu == null)
