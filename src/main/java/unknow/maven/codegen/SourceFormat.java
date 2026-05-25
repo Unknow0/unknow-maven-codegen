@@ -12,11 +12,9 @@ import com.github.javaparser.printer.configuration.Indentation.IndentType;
 import com.github.javaparser.printer.configuration.PrinterConfiguration;
 
 /**
- * Configuration for the pretty print of the java code.
- *
- * {@code <prettyPrintConfiguration>}.</p>
+ * java source formatting configuration.
  */
-public class PrettyPrintConfiguration {
+public class SourceFormat {
 
 	/**
 	 * Order imports alphabetically.

@@ -32,8 +32,8 @@ public class CodeGenConfig {
 	/**
 	 * formating of generated sources
 	 */
-	@Parameter(name = "prettyPrint")
-	public PrettyPrintConfiguration ppConfig = new PrettyPrintConfiguration();
+	@Parameter(name = "formatting")
+	public SourceFormat formatting = new SourceFormat();
 
 	/**
 	 * if true generated file for graalvm native-image

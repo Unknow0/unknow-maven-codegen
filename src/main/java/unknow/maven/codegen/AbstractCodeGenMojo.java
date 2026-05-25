@@ -100,7 +100,8 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	 * @param session can be injected with @Parameter(defaultValue = "${session}", required = true, readonly = true)
 	 * @param mojo can be injected with @Parameter(defaultValue = "${mojo}", required = true, readonly = true)
 	 * @param repository can be injected with @Component
-	 * @throws MojoFailureException
+	 * @param codegen generator configuration
+	 * @throws MojoFailureException in case of error
 	 */
 	protected void init(MavenSession session, MojoExecution mojo, RepositorySystem repository, CodeGenConfig codegen) throws MojoFailureException {
 		this.session = session;
@@ -134,7 +135,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			this.codegen.resources = baseDir + "/" + uniquePath + "/resources";
 		addResource(this.codegen.resources);
 
-		writer = new CompilationUnitWriter(this.codegen.sources, this.codegen.ppConfig.toPrinterConfiguration());
+		writer = new CompilationUnitWriter(this.codegen.sources, this.codegen.formatting.toPrinterConfiguration());
 	}
 
 	/**
@@ -151,8 +152,8 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	/**
 	 * process sources folders
 	 * @param c accept loaded sources
-	 * @throws MojoExecutionException
-	 * @throws MojoFailureException
+	 * @throws MojoExecutionException in case of error
+	 * @throws MojoFailureException in case of error
 	 */
 	protected void processSrc(TypeConsumer c) throws MojoExecutionException, MojoFailureException {
 		SrcWalker w = new SrcWalker();
@@ -203,7 +204,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	private ClassLoader getClassLoader() {
 		try {
 			List<String> classpathElements = project.getRuntimeClasspathElements();
-			URL urls[] = new URL[classpathElements.size()];
+			URL[] urls = new URL[classpathElements.size()];
 
 			for (int i = 0; i < urls.length; i++)
 				urls[i] = new File(classpathElements.get(i)).toURI().toURL();

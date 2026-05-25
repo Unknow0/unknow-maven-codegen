@@ -67,8 +67,8 @@ public class TypeFactory {
 	 * @param cl class to get
 	 * @return the class type
 	 */
-	public ClassOrInterfaceType getClass(TypeModel c) {
-		Type type = get(c.name());
+	public ClassOrInterfaceType getClass(TypeModel cl) {
+		Type type = get(cl.name());
 		if (type.isPrimitiveType())
 			return type.asPrimitiveType().toBoxedType();
 		return type.asClassOrInterfaceType();
@@ -79,26 +79,26 @@ public class TypeFactory {
 	 * @param cl class to get
 	 * @return the class type
 	 */
-	public ClassOrInterfaceType getClass(ClassOrInterfaceDeclaration decl) {
-		return get(decl.resolve().getQualifiedName()).asClassOrInterfaceType();
+	public ClassOrInterfaceType getClass(ClassOrInterfaceDeclaration cl) {
+		return get(cl.resolve().getQualifiedName()).asClassOrInterfaceType();
 	}
 
 	/**
 	 * get of create a class (add import when needed)
 	 * @param cl class to get
-	 * @param param parametrized type
+	 * @param param parameterized type
 	 * @return the class type
 	 */
-	public ClassOrInterfaceType getClass(Class<?> c, Type... param) {
-		String cl = c.getCanonicalName();
+	public ClassOrInterfaceType getClass(Class<?> cl, Type... param) {
+		String c = cl.getCanonicalName();
 		if (param.length > 0) {
-			StringBuilder sb = new StringBuilder(cl).append('<');
+			StringBuilder sb = new StringBuilder(c).append('<');
 			for (int i = 0; i < param.length; i++)
 				sb.append(param[i]).append(',');
 			sb.setCharAt(sb.length() - 1, '>');
-			cl = sb.toString();
+			c = sb.toString();
 		}
-		Type type = get(cl);
+		Type type = get(c);
 		if (type.isPrimitiveType())
 			return type.asPrimitiveType().toBoxedType();
 		return type.asClassOrInterfaceType();

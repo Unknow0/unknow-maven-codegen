@@ -32,9 +32,8 @@ public class ImportGroupsOrdering implements ImportOrderingStrategy {
 		NodeList<ImportDeclaration>[] imports = new NodeList[groups.length + 2];
 		for (int i = 0; i < imports.length; i++)
 			imports[i] = new NodeList<>();
-		int other = imports.length - 1;
 
-		loop: for (ImportDeclaration importDeclaration : nodes) {
+		for (ImportDeclaration importDeclaration : nodes) {
 			// Check if is a static import
 			if (importDeclaration.isStatic()) {
 				imports[0].add(importDeclaration);
@@ -42,16 +41,15 @@ public class ImportGroupsOrdering implements ImportOrderingStrategy {
 			}
 			String importName = importDeclaration.getNameAsString();
 
-			for (int i = 0; i < groups.length; i++) {
-				if (match(importName, groups[i])) {
-					imports[i + 1].add(importDeclaration);
-					continue loop;
-				}
-			}
-			imports[other].add(importDeclaration);
+			int i = 0;
+			while (i < groups.length && !match(importName, groups[i]))
+				i++;
+			imports[i + 1].add(importDeclaration);
 		}
 		if (sortImportsAlphabetically) {
-			for (int i = 0; i < imports.length; i++)
+			for (
+
+					int i = 0; i < imports.length; i++)
 				imports[i].sort(SORT);
 		}
 		return Arrays.asList(imports);
