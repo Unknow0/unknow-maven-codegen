@@ -168,7 +168,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		try {
 			for (String id : codegen.artifacts)
 				parseArtifact(id, c);
-		} catch (Exception e) {
+		} catch (ArtifactResolutionException e) {
 			throw new MojoExecutionException(e);
 		}
 	}
@@ -230,7 +230,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			}
 		} catch (MojoExecutionException | MojoFailureException e) {
 			throw e;
-		} catch (Exception e) {
+		} catch (IOException e) {
 			throw new MojoFailureException("Failed to resolve " + id, e);
 		}
 	}
