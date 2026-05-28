@@ -1,7 +1,5 @@
 package unknow.maven.codegen;
 
-import org.apache.maven.plugins.annotations.Parameter;
-
 import com.github.javaparser.printer.configuration.Indentation.IndentType;
 
 /**
@@ -10,12 +8,10 @@ import com.github.javaparser.printer.configuration.Indentation.IndentType;
 public class Indentation {
 
 	/** Type of indentation (e.g., SPACES or TABS). */
-	@Parameter
-	private IndentType type = IndentType.TABS;
+	private IndentType type = IndentType.SPACES;
 
 	/** Number of spaces or tabs used per indentation level. */
-	@Parameter
-	private int value = 1;
+	private int value = 4;
 
 	public Indentation() {
 	}

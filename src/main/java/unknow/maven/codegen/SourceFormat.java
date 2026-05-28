@@ -3,12 +3,9 @@ package unknow.maven.codegen;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.maven.plugins.annotations.Parameter;
-
 import com.github.javaparser.printer.configuration.DefaultConfigurationOption;
 import com.github.javaparser.printer.configuration.DefaultPrinterConfiguration;
 import com.github.javaparser.printer.configuration.DefaultPrinterConfiguration.ConfigOption;
-import com.github.javaparser.printer.configuration.Indentation.IndentType;
 import com.github.javaparser.printer.configuration.PrinterConfiguration;
 
 /**
@@ -19,44 +16,37 @@ public class SourceFormat {
 	/**
 	 * Order imports alphabetically.
 	 */
-	@Parameter(defaultValue = "true")
-	private boolean orderImports;
+	private boolean orderImports = true;
 
 	/**
 	 * The list of package prefix to group together to use (default ["java.", "javax.", "org.", "com."])
 	 */
-	@Parameter
 	private List<String> orderImportGroups = Arrays.asList("java.", "javax.", "org.", "com.");
 
 	/**
 	 * Print comments. It can be combined with {@code PRINT_JAVADOC} to print regular comments and javadoc.
 	 */
-	@Parameter(defaultValue = "true")
-	private boolean printComments;
+	private boolean printComments = true;
 
 	/**
 	 * Print javadoc comments. It can be combined with {@code PRINT_COMMENTS} to print regular javadoc and comments.
 	 */
-	@Parameter(defaultValue = "true")
-	private boolean printJavadoc;
+	private boolean printJavadoc = true;
 
 	/**
 	 * Insert spaces around operators.
 	 */
-	@Parameter(defaultValue = "true")
-	private boolean spaceAroundOperators;
+	private boolean spaceAroundOperators = true;
 
 	/**
 	 * Align method parameters in columns.
 	 */
-	@Parameter(defaultValue = "false")
-	private boolean columnAlignParameters;
+	private boolean columnAlignParameters = false;
 
 	/**
 	 * Align the first element of a method chain.
 	 */
-	@Parameter(defaultValue = "true")
-	private boolean columnAlignFirstMethodChain;
+	private boolean columnAlignFirstMethodChain = true;
 
 	/**
 	 * Indent the case when it is true, don't if false
@@ -69,8 +59,7 @@ public class SourceFormat {
 	 * }                       }
 	 * }<pre>
 	 */
-	@Parameter(defaultValue = "true")
-	private boolean indentCaseInSwitch;
+	private boolean indentCaseInSwitch = true;
 
 	/**
 	* By default enum constants get aligned like this:
@@ -95,20 +84,17 @@ public class SourceFormat {
 	* Set it to a very large number (e.g. {@code Integer.MAX_VALUE} to always align horizontally.
 	* Set it to 1 or less to always align vertically.
 	*/
-	@Parameter(defaultValue = "5")
-	private int maxEnumConstantsToAlignHorizontally;
+	private int maxEnumConstantsToAlignHorizontally = 5;
 
 	/**
 	 * The end-of-line character used when printing code.  Default is system-dependent.
 	 */
-	@Parameter
 	private String endOfLineCharacter = System.getProperty("line.separator");
 
 	/**
 	 * Indentation property.
 	 */
-	@Parameter
-	private Indentation indentation = new Indentation(IndentType.SPACES, 4);
+	private Indentation indentation = new Indentation();
 
 	public boolean isOrderImports() {
 		return orderImports;
