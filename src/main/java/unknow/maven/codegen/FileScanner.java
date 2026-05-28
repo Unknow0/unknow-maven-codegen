@@ -44,13 +44,13 @@ public final class FileScanner {
 
 	private static final class Visitor extends SimpleFileVisitor<Path> {
 		private final Path root;
-		private final FileHandler p;
+		private final FileHandler h;
 		private final Collection<PathMatcher> includes;
 		private final Collection<PathMatcher> excludes;
 
-		Visitor(Path root, FileHandler p, Collection<PathMatcher> includes, Collection<PathMatcher> excludes) {
+		Visitor(Path root, FileHandler h, Collection<PathMatcher> includes, Collection<PathMatcher> excludes) {
 			this.root = root;
-			this.p = p;
+			this.h = h;
 			this.includes = includes;
 			this.excludes = excludes;
 		}
@@ -60,7 +60,7 @@ public final class FileScanner {
 			if (!file.startsWith(root))
 				return FileVisitResult.CONTINUE;
 			Path relative = root.relativize(file);
-			if (accept(relative) && !p.handle(file, relative, attrs))
+			if (accept(relative) && !h.handle(file, relative, attrs))
 				return FileVisitResult.TERMINATE;
 			return FileVisitResult.CONTINUE;
 		}

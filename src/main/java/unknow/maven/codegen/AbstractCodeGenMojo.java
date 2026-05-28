@@ -143,11 +143,11 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	protected Collection<Artifact> artifacts() throws MojoFailureException {
 		if (artifacts != null)
 			return artifacts;
-		if (codegen.artifacts == null)
+		if (codegen.getArtifacts() == null)
 			return artifacts = Collections.emptyList();
-		artifacts = new ArrayList<>(codegen.artifacts.size());
+		artifacts = new ArrayList<>(codegen.getArtifacts().size());
 		RepositorySystemSession repositorySession = session.getRepositorySession();
-		for (String id : codegen.artifacts) {
+		for (String id : codegen.getArtifacts()) {
 			try {
 				ArtifactRequest r = new ArtifactRequest().setArtifact(new DefaultArtifact(id));
 				Artifact a = repository.resolveArtifact(repositorySession, r).getArtifact();
@@ -186,15 +186,15 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		javaSymbolSolver = new JavaSymbolSolver(new CombinedTypeSolver(solver));
 		parser = new JavaParser(new ParserConfiguration().setLanguageLevel(LanguageLevel.RAW).setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
 
-		if (this.codegen.sources == null)
-			this.codegen.sources = baseDir + "/src";
-		project.addCompileSourceRoot(this.codegen.sources);
+		if (this.codegen.getSources() == null)
+			this.codegen.setSources(baseDir + "/src");
+		project.addCompileSourceRoot(this.codegen.getSources());
 
-		if (this.codegen.resources == null)
-			this.codegen.resources = baseDir + "/resources";
-		addResource(this.codegen.resources);
+		if (this.codegen.getResources() == null)
+			this.codegen.setResources(baseDir + "/resources");
+		addResource(this.codegen.getResources());
 
-		writer = new CompilationUnitWriter(this.codegen.sources, this.codegen.formatting.toPrinterConfiguration());
+		writer = new CompilationUnitWriter(this.codegen.getSources(), this.codegen.getFormatting().toPrinterConfiguration());
 	}
 
 	/**
@@ -202,7 +202,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	 * @throws MojoFailureException in case of error
 	 */
 	private boolean changed() throws MojoFailureException {
-		if (!codegen.incremental) {
+		if (!codegen.isIncremental()) {
 			logger.info("Not incremental");
 			return true;
 		}
@@ -256,7 +256,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	 * @return a newly created compilationUnit
 	 */
 	public CompilationUnit newCu() {
-		String p = codegen.packageName;
+		String p = codegen.getPackageName();
 		CompilationUnit cu = StringUtils.isBlank(p) ? new CompilationUnit() : new CompilationUnit(p);
 		cu.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolSolver);
 		return cu;
@@ -275,7 +275,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		for (String q : classes.keySet())
 			c.accept(loader.get(q));
 
-		if (codegen.artifacts == null || codegen.artifacts.isEmpty())
+		if (codegen.getArtifacts() == null || codegen.getArtifacts().isEmpty())
 			return;
 		for (Artifact a : artifacts())
 			parseArtifact(a, c);
@@ -301,9 +301,9 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	}
 
 	protected String fullName(String simpleName) {
-		if (StringUtils.isBlank(codegen.packageName))
+		if (StringUtils.isBlank(codegen.getPackageName()))
 			return simpleName;
-		return codegen.packageName + "." + simpleName;
+		return codegen.getPackageName() + "." + simpleName;
 	}
 
 	/**
@@ -361,7 +361,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		private String packageName;
 
 		public SrcWalker() {
-			this.packageName = codegen.packageName;
+			this.packageName = codegen.getPackageName();
 			this.part = packageName == null ? new String[0] : packageName.split("\\.");
 		}
 
