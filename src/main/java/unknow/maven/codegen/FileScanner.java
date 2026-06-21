@@ -1,8 +1,6 @@
 package unknow.maven.codegen;
 
 import java.io.IOException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,46 +11,81 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.function.Function;
 
 public final class FileScanner {
-	private static final FileSystem FS = FileSystems.getDefault();
-	private static final Function<String, String> NORM = "\\".equals(FS.getSeparator()) ? s -> s.replace('/', '\\') : s -> s.replace('\\', '/');
-
 	private FileScanner() {
 	}
 
-	public static PathMatcher globSystem(String glob) {
-		return FS.getPathMatcher("glob:" + NORM.apply(glob));
-	}
-
-	public static void scan(String path, FileHandler p, PathMatcher... includes) throws IOException {
+	/**
+	 * scan folder
+	 * @param path root path
+	 * @param p handler notified for each file found
+	 * @param includes includes only file matching these glob (null or empty for all)
+	 * @throws IOException in case of error
+	 */
+	public static void scan(String path, FileHandler p, String... includes) throws IOException {
 		scan(Paths.get(path), p, Arrays.asList(includes), Collections.emptyList());
 	}
 
-	public static void scan(Path path, FileHandler p, PathMatcher... includes) throws IOException {
+	/**
+	 * scan folder
+	 * @param path root path
+	 * @param p handler notified for each file found
+	 * @param includes includes only file matching these glob (null or empty for all)
+	 * @throws IOException in case of error
+	 */
+	public static void scan(Path path, FileHandler p, String... includes) throws IOException {
 		scan(path, p, Arrays.asList(includes), Collections.emptyList());
 	}
 
-	public static void scan(Path path, FileHandler p, Collection<PathMatcher> includes, Collection<PathMatcher> excludes) throws IOException {
-		if (path == null || p == null || includes == null || excludes == null)
+	/**
+	 * scan folder
+	 * @param path root path
+	 * @param p handler notified for each file found
+	 * @param includes includes only file matching these globs (null or empty for all)
+	 * @param excludes exclude all file matching one globs (null or empty to include all)
+	 * @throws IOException in case of error
+	 */
+	public static void scan(String path, FileHandler p, Collection<String> includes, Collection<String> excludes) throws IOException {
+		scan(Paths.get(path), p, PathMatchers.includes(includes, excludes));
+	}
+
+	/**
+	 * scan folder
+	 * @param path root path
+	 * @param p handler notified for each file found
+	 * @param includes includes only file matching these globs (null or empty for all)
+	 * @param excludes exclude all file matching one globs (null or empty to include all)
+	 * @throws IOException in case of error
+	 */
+	public static void scan(Path path, FileHandler p, Collection<String> includes, Collection<String> excludes) throws IOException {
+		scan(path, p, PathMatchers.includes(includes, excludes));
+	}
+
+	/**
+	 * scan folder
+	 * @param path root path
+	 * @param p handler notified for each file found
+	 * @param matcher includes only file matching these globs (null or empty for all)
+	 * @throws IOException in case of error
+	 */
+	public static void scan(Path path, FileHandler p, PathMatcher matcher) throws IOException {
+		if (path == null || p == null || matcher == null)
 			throw new NullPointerException();
 		if (!Files.isDirectory(path))
 			return;
-		Files.walkFileTree(path, new Visitor(path, p, includes, excludes));
+		Files.walkFileTree(path, new Visitor(path, p, matcher));
 	}
 
 	private static final class Visitor extends SimpleFileVisitor<Path> {
 		private final Path root;
 		private final FileHandler h;
-		private final Collection<PathMatcher> includes;
-		private final Collection<PathMatcher> excludes;
+		private final PathMatcher matcher;
 
-		Visitor(Path root, FileHandler h, Collection<PathMatcher> includes, Collection<PathMatcher> excludes) {
+		Visitor(Path root, FileHandler h, PathMatcher matcher) {
 			this.root = root;
 			this.h = h;
-			this.includes = includes;
-			this.excludes = excludes;
+			this.matcher = matcher;
 		}
 
 		@Override
@@ -60,24 +93,11 @@ public final class FileScanner {
 			if (!file.startsWith(root))
 				return FileVisitResult.CONTINUE;
 			Path relative = root.relativize(file);
-			if (accept(relative) && !h.handle(file, relative, attrs))
+			if (matcher.matches(relative) && !h.handle(file, relative, attrs))
 				return FileVisitResult.TERMINATE;
 			return FileVisitResult.CONTINUE;
 		}
 
-		private boolean accept(Path file) {
-			for (PathMatcher p : excludes) {
-				if (p.matches(file))
-					return false;
-			}
-			if (includes.isEmpty())
-				return true;
-			for (PathMatcher p : includes) {
-				if (p.matches(file))
-					return true;
-			}
-			return false;
-		}
 	}
 
 	public interface FileHandler {

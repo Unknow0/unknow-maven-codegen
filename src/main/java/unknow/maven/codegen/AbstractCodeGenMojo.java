@@ -19,10 +19,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import javax.inject.Inject;
 
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.execution.MavenSession;
@@ -32,12 +32,9 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.utils.StringUtils;
-import org.codehaus.plexus.util.DirectoryWalkListener;
-import org.codehaus.plexus.util.DirectoryWalker;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
@@ -74,7 +71,7 @@ import unknow.model.jvm.JvmModelLoader;
 public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	private static final Logger logger = LoggerFactory.getLogger(AbstractCodeGenMojo.class);
 
-	private static final PathMatcher JAVA = p -> p.getFileName().endsWith(".java");
+	private static final PathMatcher JAVA = p -> p.getFileName().toString().endsWith(".java");
 
 	private Path lastSucessfulBuild;
 
@@ -84,7 +81,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	protected MavenSession session;
 	@Parameter(defaultValue = "${mojo}", required = true, readonly = true)
 	protected MojoExecution mojo;
-	@Component
+	@Inject
 	protected RepositorySystem repository;
 	@Parameter
 	protected CodeGenConfig codegen;
@@ -103,9 +100,9 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	protected final Map<String, String> existingClass = new HashMap<>();
 
 	/** all class in src (fqn to classDef), filled by processSrc */
-	protected final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
-	/** all package in src, filled by processSrc */
-	protected final Map<String, PackageDeclaration> packages = new HashMap<>();
+	private final Map<String, TypeDeclaration<?>> classes = new HashMap<>();
+	/** all package declaration in src filled by processSrc */
+	private final Map<String, PackageDeclaration> packages = new HashMap<>();
 
 	/** modelLoader on source file and artifacts */
 	protected ModelLoader loader;
@@ -113,8 +110,9 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 	/** the runtime class loader */
 	protected ClassLoader classLoader;
 
+	/** the maven project */
 	protected MavenProject project;
-
+	/** unique path part for this plugin execution */
 	protected String uniquePath;
 
 	@Override
@@ -133,14 +131,19 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		}
 	}
 
+	/**
+	 * main execution of the plugin
+	 * @throws MojoExecutionException in case of error
+	 * @throws MojoFailureException in case of error
+	 */
 	protected abstract void doexecute() throws MojoExecutionException, MojoFailureException;
 
 	/**
 	 * resolved artifacts from codegen.artifacts or empty list if none
 	 * @return resolved artifacts to process
-	 * @throws MojoFailureException in case of resolving issue
+	 * @throws MojoExecutionException in case of resolving issue
 	 */
-	protected Collection<Artifact> artifacts() throws MojoFailureException {
+	protected Collection<Artifact> artifacts() throws MojoExecutionException {
 		if (artifacts != null)
 			return artifacts;
 		if (codegen.getArtifacts() == null)
@@ -152,10 +155,10 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 				ArtifactRequest r = new ArtifactRequest().setArtifact(new DefaultArtifact(id));
 				Artifact a = repository.resolveArtifact(repositorySession, r).getArtifact();
 				if (a == null)
-					throw new MojoFailureException("Failed to resolv artifact " + id);
+					throw new MojoExecutionException("Failed to resolv artifact " + id);
 				artifacts.add(a);
 			} catch (ArtifactResolutionException e) {
-				throw new MojoFailureException(e);
+				throw new MojoExecutionException(e);
 			}
 		}
 		return artifacts;
@@ -173,10 +176,8 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		this.lastSucessfulBuild = Paths.get(baseDir + "/last-successful-build");
 
 		classLoader = getClassLoader();
-		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new AstModelLoader(classes, packages), new JvmModelLoader(classLoader));
 
 		List<String> compileSourceRoots = project.getCompileSourceRoots();
-
 		List<TypeSolver> solver = new ArrayList<>(compileSourceRoots.size() + 1);
 		solver.add(new ClassLoaderTypeSolver(classLoader));
 		for (String s : compileSourceRoots) {
@@ -184,7 +185,8 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 				solver.add(new JavaParserTypeSolver(s));
 		}
 		javaSymbolSolver = new JavaSymbolSolver(new CombinedTypeSolver(solver));
-		parser = new JavaParser(new ParserConfiguration().setLanguageLevel(LanguageLevel.RAW).setStoreTokens(true).setSymbolResolver(javaSymbolSolver));
+		parser = new JavaParser(new ParserConfiguration().setLanguageLevel(LanguageLevel.RAW).setStoreTokens(false).setSymbolResolver(javaSymbolSolver));
+		loader = ModelLoader.from(JvmModelLoader.GLOBAL, new AstModelLoader(classes, packages), new JvmModelLoader(classLoader));
 
 		if (this.codegen.getSources() == null)
 			this.codegen.setSources(baseDir + "/src");
@@ -199,9 +201,9 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 
 	/**
 	 * @return true if the source/resources/pom have changed since the last build
-	 * @throws MojoFailureException in case of error
+	 * @throws MojoExecutionException in case of error
 	 */
-	private boolean changed() throws MojoFailureException {
+	private boolean changed() throws MojoExecutionException {
 		if (!codegen.isIncremental()) {
 			logger.info("Not incremental");
 			return true;
@@ -214,10 +216,9 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		try {
 			last = Files.getLastModifiedTime(lastSucessfulBuild).toMillis();
 		} catch (IOException e) {
-			logger.info("Faile to get lastSucessfullBuild timestamp", e);
+			logger.info("Failed to get lastSucessfullBuild timestamp", e);
 			return true;
 		}
-		logger.info("previous build: {}", Instant.ofEpochMilli(last));
 		MavenProject p = project;
 		while (p != null) {
 			long lastModified = p.getFile().lastModified();
@@ -242,12 +243,21 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 				return true;
 		}
 		for (Resource r : project.getResources()) {
-			List<PathMatcher> includes = r.getIncludes().stream().map(s -> FileScanner.globSystem(s)).collect(Collectors.toList());
-			List<PathMatcher> excludes = r.getExcludes().stream().map(s -> FileScanner.globSystem(s)).collect(Collectors.toList());
-			if (w.hasChanged(r.getDirectory(), includes, excludes))
+			if (w.hasChanged(r.getDirectory(), r.getIncludes(), r.getExcludes()))
 				return true;
 		}
 
+		return hasChanged(last);
+	}
+
+	/**
+	 * override to check other resource for change.
+	 * <br>Already check change in pom hierarchy, sources, resources and artifacts.
+	 * @param lastSucessfulBuild timestamp in ms
+	 * @return true if change are detected
+	 * @throws MojoExecutionException in case of error
+	 */
+	protected boolean hasChanged(@SuppressWarnings("unused") long lastSucessfulBuild) throws MojoExecutionException {
 		return false;
 	}
 
@@ -272,6 +282,7 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		SrcWalker w = new SrcWalker();
 		for (String s : project.getCompileSourceRoots())
 			w.walk(s);
+
 		for (String q : classes.keySet())
 			c.accept(loader.get(q));
 
@@ -283,20 +294,15 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 
 	/**
 	 * process all the resources folder
-	 * @param c consumer of fullPath, relativePath
+	 * @param h handler for each file found in resources
 	 */
-	protected void processResources(BiConsumer<Path, Path> c) {
-		DirectoryWalker scanner = new DirectoryWalker();
-		L l = new L(c);
-		scanner.addDirectoryWalkListener(l);
+	protected void processResources(FileHandler h) {
 		for (Resource r : project.getResources()) {
-			l.root = Paths.get(r.getDirectory());
-			if (!Files.exists(l.root))
-				continue;
-			scanner.setBaseDir(l.root.toFile());
-			scanner.setIncludes(r.getIncludes());
-			scanner.setExcludes(r.getExcludes());
-			scanner.scan();
+			try {
+				FileScanner.scan(Paths.get(r.getDirectory()), h, r.getIncludes(), r.getExcludes());
+			} catch (IOException e) {
+				logger.warn("Failed to process {}", r.getDirectory(), e);
+			}
 		}
 	}
 
@@ -397,8 +403,9 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 			CompilationUnit cu = parse.getResult().orElse(null);
 			if (cu == null)
 				return true;
+			if ("package-info.java".equals(file.getFileName().toString()))
+				cu.getPackageDeclaration().ifPresent(p -> packages.put(p.getNameAsString(), p));
 
-			cu.getPackageDeclaration().filter(v -> v.getAnnotations() != null).ifPresent(v -> packages.put(v.getNameAsString(), v));
 			for (TypeDeclaration<?> v : cu.findAll(TypeDeclaration.class)) {
 				String qualifiedName = v.resolve().getQualifiedName();
 				classes.put(qualifiedName, v);
@@ -409,33 +416,6 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 				existingClass.put(string, packageName + "." + string);
 			}
 			return true;
-		}
-	}
-
-	private static class L implements DirectoryWalkListener {
-		final BiConsumer<Path, Path> c;
-		Path root;
-
-		L(BiConsumer<Path, Path> c) {
-			this.c = c;
-		}
-
-		@Override
-		public void directoryWalkStep(int percentage, File file) {
-			Path path = file.toPath();
-			c.accept(path, root.relativize(path));
-		}
-
-		@Override
-		public void directoryWalkStarting(File basedir) { // ok
-		}
-
-		@Override
-		public void directoryWalkFinished() { // ok
-		}
-
-		@Override
-		public void debug(String message) { // ok
 		}
 	}
 
