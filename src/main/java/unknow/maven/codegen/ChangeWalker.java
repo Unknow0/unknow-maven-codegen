@@ -6,9 +6,7 @@ import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,22 +34,18 @@ public class ChangeWalker implements FileHandler {
 		return true;
 	}
 
-	public boolean hasChanged(String path, PathMatcher... includes) {
-		return hasChanged(Paths.get(path), Arrays.asList(includes), Collections.emptyList());
+	public boolean hasChanged(String path, PathMatcher matcher) {
+		return hasChanged(Paths.get(path), matcher);
 	}
 
-	public boolean hasChanged(Path path, PathMatcher... includes) {
-		return hasChanged(path, Arrays.asList(includes), Collections.emptyList());
+	public boolean hasChanged(String path, Collection<String> includes, Collection<String> excludes) {
+		return hasChanged(Paths.get(path), PathMatchers.includes(includes, excludes));
 	}
 
-	public boolean hasChanged(String path, Collection<PathMatcher> includes, Collection<PathMatcher> excludes) {
-		return hasChanged(Paths.get(path), includes, excludes);
-	}
-
-	public boolean hasChanged(Path path, Collection<PathMatcher> includes, Collection<PathMatcher> excludes) {
+	public boolean hasChanged(Path path, PathMatcher matcher) {
 		this.changed = false;
 		try {
-			FileScanner.scan(path, this, includes, excludes);
+			FileScanner.scan(path, this, matcher);
 			return changed;
 		} catch (IOException e) {
 			logger.warn("Failed to check last change", e);
