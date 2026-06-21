@@ -133,6 +133,8 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 
 	/**
 	 * main execution of the plugin
+	 * @throws MojoExecutionException in case of error
+	 * @throws MojoFailureException in case of error
 	 */
 	protected abstract void doexecute() throws MojoExecutionException, MojoFailureException;
 
@@ -248,7 +250,14 @@ public abstract class AbstractCodeGenMojo extends AbstractMojo {
 		return hasChanged(last);
 	}
 
-	protected boolean hasChanged(@SuppressWarnings("unused") long lastSucessfulBuild) {
+	/**
+	 * override to check other resource for change.
+	 * <br>Already check change in pom hierarchy, sources, resources and artifacts.
+	 * @param lastSucessfulBuild timestamp in ms
+	 * @return true if change are detected
+	 * @throws MojoExecutionException in case of error
+	 */
+	protected boolean hasChanged(@SuppressWarnings("unused") long lastSucessfulBuild) throws MojoExecutionException {
 		return false;
 	}
 
